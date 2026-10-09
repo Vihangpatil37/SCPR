@@ -44,6 +44,18 @@ export class CounselorController {
     return this.counselorService.getSessions(req.user.user_id);
   }
 
+  @Post('conversations')
+  @HttpCode(HttpStatus.CREATED)
+  async createConversation(@Request() req: any) {
+    const session = await this.counselorService.startSession(req.user.user_id, {});
+    return {
+      _id: session._id.toString(),
+      summary: session.summary,
+      started_at: (session as any).started_at,
+      last_message_at: (session as any).last_message_at,
+    };
+  }
+
   @Get('conversations/:id')
   async getHistory(@Request() req: any, @Param('id') id: string) {
     return this.counselorService.getSessionHistory(req.user.user_id, id);

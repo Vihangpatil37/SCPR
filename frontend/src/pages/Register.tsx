@@ -33,9 +33,8 @@ export const Register = () => {
     setError(null);
     try {
       const data: any = await client.post('/auth/register', { email, password, full_name: fullName });
-      // Use the temporary setup token and go to 2FA
-      useAuthStore.getState().updateAccessToken(data.setup_token);
-      navigate('/setup-2fa');
+      useAuthStore.getState().setAuth(data.user, data.access_token, data.refresh_token);
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {

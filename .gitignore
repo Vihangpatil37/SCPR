@@ -12,6 +12,10 @@ build/
 .env.example
 .env.local
 .env.*.local
+*.env
+env
+backend/env
+backend/.env
 
 # Docker
 .dockerignore

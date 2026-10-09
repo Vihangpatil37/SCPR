@@ -10,7 +10,7 @@ import {
   TrendingUp,
   X,
   ChevronRight,
-  MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
@@ -268,9 +268,29 @@ export const CareerExplorer: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-1.5 text-xs text-brand font-semibold pt-3 mt-3 border-t border-white/[0.06] relative z-10">
-                    <span>View Roadmap & Requirements</span>
-                    <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/[0.06] relative z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/chat', {
+                          state: {
+                            initialPrompt: `How do I become a ${career.name} according to my recommendations? Please provide a comprehensive career roadmap, required skills, and salary progression.`,
+                            careerCode: career.career_code,
+                            careerName: career.name,
+                            autoSend: true,
+                          },
+                        });
+                      }}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-brand/15 hover:bg-brand text-brand hover:text-white border border-brand/30 transition-all text-xs font-semibold cursor-pointer shadow-sm focus:outline-none group/btn"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-ai-cyan group-hover/btn:text-white transition-colors" />
+                      <span>Get Roadmap in Chat</span>
+                    </button>
+
+                    <div className="flex items-center space-x-1 text-xs text-text-secondary group-hover:text-brand font-medium">
+                      <span>View Details</span>
+                      <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
                 </GlassCard>
               );
@@ -432,34 +452,43 @@ export const CareerExplorer: React.FC = () => {
                   )}
                 </div>
 
-                <div className="pt-6 border-t border-white/[0.06] mt-6 flex justify-between items-center gap-3">
+                <div className="pt-6 border-t border-white/[0.06] mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+                  <Button
+                    onClick={() => {
+                      const careerName = selectedCareer.name;
+                      setSelectedCareer(null);
+                      navigate('/chat', {
+                        state: {
+                          initialPrompt: `How do I become a ${careerName} according to my recommendations? Please provide a comprehensive career roadmap, required skills, and salary progression.`,
+                          careerCode: selectedCareer.career_code,
+                          careerName: careerName,
+                          autoSend: true,
+                        },
+                      });
+                    }}
+                    className="w-full sm:w-auto flex-grow text-xs bg-brand hover:bg-brand-hover shadow-lg shadow-brand/20"
+                    variant="primary"
+                  >
+                    <Sparkles className="h-4 w-4 text-ai-cyan" />
+                    <span>Get Roadmap in AI Chat</span>
+                  </Button>
+
                   <Button
                     onClick={(e) => handleToggleBookmark(selectedCareer.career_code, e)}
-                    className="flex-grow text-xs"
-                    variant={savedCodes.includes(selectedCareer.career_code) ? 'secondary' : 'primary'}
+                    className="w-full sm:w-auto text-xs"
+                    variant={savedCodes.includes(selectedCareer.career_code) ? 'secondary' : 'ghost'}
                   >
                     {savedCodes.includes(selectedCareer.career_code) ? (
                       <>
                         <BookmarkCheck className="h-4 w-4" />
-                        <span>Saved Bookmark</span>
+                        <span>Saved</span>
                       </>
                     ) : (
                       <>
                         <Bookmark className="h-4 w-4" />
-                        <span>Bookmark Path</span>
+                        <span>Bookmark</span>
                       </>
                     )}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setSelectedCareer(null);
-                      navigate('/chat');
-                    }}
-                    variant="secondary"
-                    className="text-xs"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Ask Counselor</span>
                   </Button>
                 </div>
               </GlassCard>

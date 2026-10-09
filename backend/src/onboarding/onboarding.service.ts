@@ -120,6 +120,25 @@ export class OnboardingService {
         this.flowService.getCompletionPercentage(normalizedStep);
     }
 
+    // Ensure array fields are sanitized to prevent CastErrors
+    if (!Array.isArray(profile.goals)) {
+      if (typeof profile.goals === 'object' && profile.goals !== null) {
+        const obj = profile.goals as any;
+        profile.goals = [
+          ...(Array.isArray(obj.target_roles) ? obj.target_roles : []),
+          ...(Array.isArray(obj.preferred_industries) ? obj.preferred_industries : []),
+        ];
+      } else {
+        profile.goals = [];
+      }
+    }
+    if (!Array.isArray(profile.work_preferences)) {
+      profile.work_preferences = [];
+    }
+    if (!Array.isArray(profile.scenario_responses)) {
+      profile.scenario_responses = [];
+    }
+
     await profile.save();
     this.logger.log(
       `Saved onboarding step ${normalizedStep} for user: ${userId}`,

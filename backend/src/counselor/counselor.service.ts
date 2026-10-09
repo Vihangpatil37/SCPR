@@ -53,24 +53,12 @@ export class CounselorService {
   ): Promise<ConversationDocument> {
     this.logger.log(`Starting counseling session for user: ${userId}`);
 
-    // Create new conversation
+    // Create new clean conversation
     const conversation = new this.conversationModel({
       user_id: userId,
       summary: '',
     });
     await conversation.save();
-
-    // Seed initial greeting message
-    const greetingText = `Good day. I am your academic and career counselor. I have reviewed your assessment profile and mapped several career pathways matched to your academic performance and interests. How may I assist you today?`;
-
-    const message = new this.messageModel({
-      conversation_id: String(conversation._id),
-      role: 'counselor',
-      content: greetingText,
-      intent: 'general_chat',
-      is_structured: false,
-    });
-    await message.save();
 
     return conversation;
   }
@@ -97,10 +85,18 @@ export class CounselorService {
     if (!conversation || conversation.user_id !== userId) {
       throw new NotFoundException('Conversation not found or unauthorized');
     }
-    return this.messageModel
+    const messages = await this.messageModel
       .find({ conversation_id: sessionId })
       .sort({ created_at: 1 })
       .exec();
+
+    return messages.map((m: any) => {
+      const obj = m.toObject ? m.toObject() : m;
+      if (typeof obj.content === 'string') {
+        obj.content = obj.content.replace(/### 🧭 Roadmap Flow[\s\S]*?(?=(###|$))/g, '').trim();
+      }
+      return obj;
+    });
   }
 
   async sendMessage(
@@ -128,7 +124,10 @@ export class CounselorService {
     });
     await userMessage.save();
 
-    // Update conversation last_message_at
+    // Update conversation last_message_at and auto-generate summary/title from first message
+    if (!conversation.summary || conversation.summary.trim() === '') {
+      conversation.summary = messageText.length > 36 ? messageText.substring(0, 36) + '...' : messageText;
+    }
     conversation.set('last_message_at', new Date());
     await conversation.save();
 
@@ -410,33 +409,7 @@ export class CounselorService {
       md += `\n`;
     }
 
-    const mermaidSyntax = this.buildMermaidSyntax(
-      data.mermaid?.nodes,
-      data.mermaid?.edges,
-    );
-    if (mermaidSyntax) {
-      md += `### 🧭 Roadmap Flow\n\n\`\`\`mermaid\n${mermaidSyntax}\n\`\`\`\n`;
-    }
-
     return md;
-  }
-
-  private buildMermaidSyntax(
-    nodes: { id: string; label: string }[] | undefined,
-    edges: { from: string; to: string }[] | undefined,
-  ): string {
-    if (!nodes || nodes.length === 0) return '';
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    const lines = ['graph TD'];
-    for (const node of nodes) {
-      lines.push(`  ${node.id}["${node.label}"]`);
-    }
-    for (const edge of edges || []) {
-      if (nodeMap.has(edge.from) && nodeMap.has(edge.to)) {
-        lines.push(`  ${edge.from} --> ${edge.to}`);
-      }
-    }
-    return lines.join('\n');
   }
 
   private classifyIntent(text: string): string {

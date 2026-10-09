@@ -18,26 +18,53 @@ export class EligibilityEngineService {
       `Running Eligibility Engine for student: ${student.user_id}`,
     );
 
-    const mathsScore = student.academic?.class10?.subjects?.maths ?? 0;
-    const scienceScore = student.academic?.class10?.subjects?.science ?? 0;
+    const rawMaths = student.academic?.class10?.subjects?.maths;
+    const rawScience = student.academic?.class10?.subjects?.science;
+    const overallPct = student.academic?.class10?.percentage ?? 60;
 
-    const studyDurationMax = student.constraints?.study_duration_max ?? 5;
+    const mathsScore = rawMaths !== undefined && rawMaths > 0 ? rawMaths : overallPct;
+    const scienceScore = rawScience !== undefined && rawScience > 0 ? rawScience : overallPct;
+    const studyDurationMax = Math.max(student.constraints?.study_duration_max ?? 5, 4);
 
-    // Extra fields to check from eligibility schema
-    const biologyScore = student.academic?.class10?.subjects?.computer ?? 0; // fallback or biological check if needed
-    const englishScore = student.academic?.class10?.subjects?.english ?? 0;
+    // 1. Strict Query
+    let eligible = await this.careerModel
+      .find({
+        'eligibility.min_maths': { $lte: mathsScore },
+        'eligibility.min_science': { $lte: scienceScore },
+        'eligibility.min_study_duration_years': { $lte: studyDurationMax },
+      })
+      .exec();
 
-    // Rule-based filtering pushed into MongoDB query directly for maximum scalability
-    const query = {
-      'eligibility.min_maths': { $lte: mathsScore },
-      'eligibility.min_science': { $lte: scienceScore },
+    if (eligible.length >= 5) {
+      this.logger.log(
+        `Eligibility check (strict): found ${eligible.length} careers matching hard gates`,
+      );
+      return eligible;
+    }
 
-      'eligibility.min_study_duration_years': { $lte: studyDurationMax },
-    };
+    // 2. Relaxed Query (allow careers where either subject matches, or stream is non-science/any)
+    eligible = await this.careerModel
+      .find({
+        $or: [
+          { 'eligibility.min_maths': { $lte: mathsScore + 20 } },
+          { 'eligibility.min_science': { $lte: scienceScore + 20 } },
+          { 'eligibility.required_stream': { $in: ['any', 'commerce', 'arts', 'vocational', null] } },
+          { eligibility: { $exists: false } },
+        ],
+      })
+      .exec();
 
-    const eligible = await this.careerModel.find(query).exec();
+    if (eligible.length >= 5) {
+      this.logger.log(
+        `Eligibility check (relaxed): found ${eligible.length} careers`,
+      );
+      return eligible;
+    }
+
+    // 3. Broad Fallback (return all available careers so student always receives guidance)
+    eligible = await this.careerModel.find().limit(40).exec();
     this.logger.log(
-      `Eligibility check: found ${eligible.length} careers matching hard gates`,
+      `Eligibility check (full catalog fallback): found ${eligible.length} careers`,
     );
 
     return eligible;

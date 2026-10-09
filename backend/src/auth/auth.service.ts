@@ -47,19 +47,14 @@ export class AuthService {
 
     await user.save();
     
-    // Instead of full tokens, return a setup token for 2FA
-    const setupToken = this.jwtService.sign(
-      { sub: user.user_id, email: user.email, setup_2fa: true },
-      { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' }
-    );
+    const tokens = await this.generateTokens(user);
 
     return {
-      message: 'Registration successful. Please complete 2FA setup.',
-      setup_token: setupToken,
+      message: 'Registration successful',
+      user: this.sanitizeUser(user),
+      ...tokens,
     };
   }
-
-
 
   async login(dto: LoginDto) {
     const user = await this.userModel
@@ -97,27 +92,12 @@ export class AuthService {
     user.last_login = new Date();
     await user.save();
 
-    if (!user.is_two_factor_enabled) {
-      // If they somehow skipped 2FA, force them into setup
-      const setupToken = this.jwtService.sign(
-        { sub: user.user_id, email: user.email, setup_2fa: true },
-        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' }
-      );
-      return {
-        requires_2fa_setup: true,
-        setup_token: setupToken,
-      };
-    }
-
-    // Return a temporary token for 2FA verification
-    const twoFactorToken = this.jwtService.sign(
-      { sub: user.user_id, email: user.email, verify_2fa: true },
-      { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '5m' }
-    );
+    const tokens = await this.generateTokens(user);
 
     return {
-      requires_2fa: true,
-      two_factor_token: twoFactorToken,
+      message: 'Login successful',
+      user: this.sanitizeUser(user),
+      ...tokens,
     };
   }
 

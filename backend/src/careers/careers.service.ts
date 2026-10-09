@@ -70,7 +70,19 @@ export class CareersService implements OnModuleInit {
       '/app/catalogs/SCPR_Master_Career_Catalog_Part_1_Science_v2.md',
     )
       ? '/app/catalogs'
-      : path.resolve(__dirname, '../../../../');
+      : [
+          path.resolve(process.cwd(), '..'),
+          process.cwd(),
+          path.resolve(__dirname, '../../../'),
+          path.resolve(__dirname, '../../../../'),
+        ].find((dir) =>
+          fs.existsSync(
+            path.join(
+              dir,
+              'SCPR_Master_Career_Catalog_Part_1_Science_v2.md',
+            ),
+          ),
+        ) || path.resolve(__dirname, '../../../');
 
     const catalogFiles = [
       {

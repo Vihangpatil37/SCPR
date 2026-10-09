@@ -268,7 +268,21 @@ export class StudentProfile {
   @Prop({ type: StudentSkills, required: true, default: () => ({}) })
   skills: StudentSkills;
 
-  @Prop({ type: [String], required: true, default: [] })
+  @Prop({
+    type: [String],
+    required: false,
+    default: [],
+    set: (val: any) => {
+      if (Array.isArray(val)) return val.map(String);
+      if (typeof val === 'object' && val !== null) {
+        return [
+          ...(Array.isArray(val.target_roles) ? val.target_roles : []),
+          ...(Array.isArray(val.preferred_industries) ? val.preferred_industries : []),
+        ].map(String);
+      }
+      return val ? [String(val)] : [];
+    },
+  })
   goals: string[]; // ranked array
 
   @Prop({ type: [String], required: true, default: [] })
